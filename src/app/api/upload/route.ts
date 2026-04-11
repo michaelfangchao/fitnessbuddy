@@ -16,6 +16,31 @@ import sharp from "sharp";
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // 4MB before resize
 const MAX_DIMENSION = 1024;
 
+// Flat schema — more reliable with generateObject than discriminatedUnion.
+// All non-type fields are optional; Claude fills in only what's relevant.
+const VisionResponseSchema = z.object({
+  type: z.enum(["meal", "weight", "unknown"]),
+  // Meal fields
+  items: z.array(
+    z.object({
+      name: z.string(),
+      calories: z.number(),
+      protein_g: z.number(),
+      carbs_g: z.number(),
+      fat_g: z.number(),
+    })
+  ).optional(),
+  is_asian_cuisine: z.boolean().optional(),
+  ai_confidence: z.number().min(0).max(1).optional(),
+  meal_type: z.enum(["breakfast", "lunch", "dinner", "snack"]).optional(),
+  // Weight fields
+  value_kg: z.number().optional(),
+  date: z.string().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  // Unknown reason
+  reason: z.string().optional(),
+});
+
 export async function POST(request: Request) {
   let session;
   try {
@@ -56,34 +81,6 @@ export async function POST(request: Request) {
 
   // Send to Claude vision
   try {
-    const VisionResponseSchema = z.discriminatedUnion("type", [
-      z.object({
-        type: z.literal("meal"),
-        items: z.array(
-          z.object({
-            name: z.string(),
-            calories: z.number(),
-            protein_g: z.number(),
-            carbs_g: z.number(),
-            fat_g: z.number(),
-          })
-        ),
-        is_asian_cuisine: z.boolean(),
-        ai_confidence: z.number().min(0).max(1),
-        meal_type: z.enum(["breakfast", "lunch", "dinner", "snack"]).optional(),
-      }),
-      z.object({
-        type: z.literal("weight"),
-        value_kg: z.number(),
-        date: z.string(),
-        confidence: z.number().min(0).max(1),
-      }),
-      z.object({
-        type: z.literal("unknown"),
-        reason: z.string().optional(),
-      }),
-    ]);
-
     const { object } = await generateObject({
       model: anthropicClient("claude-sonnet-4-6"),
       schema: VisionResponseSchema,
@@ -98,20 +95,20 @@ export async function POST(request: Request) {
             },
             {
               type: "text",
-              text: `Analyze this image.
+              text: `Analyze this image and return a JSON object.
 
-If it shows food/a meal: return type "meal" with estimated nutritional data per item.
+If it shows food/a meal: set type "meal", populate items with estimated nutrition per item.
 - is_asian_cuisine: true if most items are Chinese, Japanese, Korean, Southeast Asian, etc.
 - ai_confidence: your confidence in the estimates (0.0-1.0)
 
-If it shows health/fitness data with a body weight reading: return type "weight".
+If it shows health/fitness data with a body weight reading: set type "weight".
 - value_kg: the most recent weight value shown
-- date: the date of that measurement in YYYY-MM-DD format (today is ${userDate} if no date shown)
+- date: the date of that measurement in YYYY-MM-DD format (use ${userDate} if no date shown)
 - confidence: how certain you are this is a weight reading (0.0-1.0)
 
-If you cannot identify the image as either food or a health measurement with weight data: return type "unknown".
+If you cannot identify the image as food or a health measurement: set type "unknown".
 
-Important: For multi-value health graphs, use only the most recent single value.`,
+For multi-value health graphs, use only the most recent single value.`,
             },
           ],
         },
@@ -120,20 +117,24 @@ Important: For multi-value health graphs, use only the most recent single value.
 
     return NextResponse.json(object);
   } catch (error: unknown) {
-    const err = error as { status?: number };
-    if (err?.status === 429) {
+    // AI SDK v6 uses statusCode, not status
+    const err = error as { statusCode?: number; status?: number; message?: string };
+    const code = err?.statusCode ?? err?.status;
+
+    console.error("Upload error:", { code, message: err?.message, error });
+
+    if (code === 429) {
       return NextResponse.json(
-        { error: "Service busy, try again in a moment." },
-        { status: 429 }
+        { error: "Service busy — try again in a moment." },
+        { status: 503 }
       );
     }
-    if (err?.status && err.status >= 500) {
+    if (code && code >= 500) {
       return NextResponse.json(
         { error: "AI service unavailable." },
         { status: 503 }
       );
     }
-    console.error("Upload error:", error);
     return NextResponse.json({ error: "Processing failed." }, { status: 500 });
   }
 }
