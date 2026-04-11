@@ -70,7 +70,8 @@ export async function requireSessionFromCookies(): Promise<SessionPayload> {
     throw unauthorizedResponse("Session expired");
   }
 
-  await refreshSession(payload.userId);
+  // Note: cannot call refreshSession() here — cookies().set() is not allowed
+  // in Server Components. Session refresh happens on every authenticated API call.
   return payload;
 }
 
