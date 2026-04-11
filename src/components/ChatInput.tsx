@@ -158,7 +158,7 @@ export default function ChatInput({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isBusy}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-neutral-800
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-neutral-800
             text-neutral-400 transition-colors hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
           title="Upload a meal photo or Apple Health screenshot"
         >
@@ -183,8 +183,8 @@ export default function ChatInput({
           disabled={isBusy}
           className="flex-1 resize-none rounded-xl bg-neutral-800 px-4 py-2.5 text-sm text-neutral-100
             placeholder-neutral-500 outline-none focus:ring-1 focus:ring-neutral-600
-            disabled:opacity-50 min-h-[40px] max-h-[140px] overflow-y-auto"
-          style={{ height: "40px" }}
+            disabled:opacity-50 min-h-[44px] max-h-[140px] overflow-y-auto"
+          style={{ height: "44px" }}
         />
 
         {hasSpeechSupport && (
@@ -192,7 +192,7 @@ export default function ChatInput({
             type="button"
             onClick={isRecording ? stopVoice : startVoice}
             disabled={isBusy && !isRecording}
-            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors
+            className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-colors
               ${isRecording
                 ? "bg-red-600 text-white animate-pulse"
                 : "bg-neutral-800 text-neutral-400 hover:text-white disabled:opacity-40"
@@ -205,7 +205,7 @@ export default function ChatInput({
         <button
           type="submit"
           disabled={!input.trim() || isBusy}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-600
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-blue-600
             text-white transition-all hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ↑

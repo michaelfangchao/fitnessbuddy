@@ -110,7 +110,7 @@ export default function ChatInterface({ user, streak, pendingDigest }: Props) {
         </div>
         <button
           onClick={handleLogout}
-          className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+          className="py-2 px-3 text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
         >
           Switch user
         </button>
