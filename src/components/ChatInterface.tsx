@@ -171,6 +171,8 @@ export default function ChatInterface({ user, streak, pendingDigest }: Props) {
           <div className="rounded-lg bg-red-950 px-4 py-3 text-sm text-red-300">
             {error.message.includes("busy")
               ? "Service busy — try again in a moment."
+              : error.message.includes("credit") || error.message.includes("balance")
+              ? "AI service unavailable — check your Anthropic API billing."
               : "Something went wrong. Please try again."}
           </div>
         )}
