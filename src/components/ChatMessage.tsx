@@ -1,6 +1,8 @@
 "use client";
 
 import type { UIMessage } from "ai";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import WorkoutConfirmCard from "./cards/WorkoutConfirmCard";
 import MealConfirmCard from "./cards/MealConfirmCard";
 import WeightConfirmCard from "./cards/WeightConfirmCard";
@@ -47,7 +49,25 @@ export default function ChatMessage({ message, userId, userDate }: Props) {
           if (!textPart.text) return null;
           return (
             <div key={i} className="max-w-[90%] text-sm leading-relaxed text-neutral-100">
-              {textPart.text}
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ children }) => <p className="font-semibold text-white mb-1">{children}</p>,
+                  h2: ({ children }) => <p className="font-semibold text-white mb-1">{children}</p>,
+                  h3: ({ children }) => <p className="font-semibold text-white mb-1">{children}</p>,
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+                  em: ({ children }) => <em className="italic text-neutral-300">{children}</em>,
+                  ul: ({ children }) => <ul className="mb-2 space-y-1 pl-4">{children}</ul>,
+                  ol: ({ children }) => <ol className="mb-2 space-y-1 pl-4 list-decimal">{children}</ol>,
+                  li: ({ children }) => <li className="list-disc marker:text-neutral-500">{children}</li>,
+                  hr: () => <hr className="my-3 border-neutral-700" />,
+                  code: ({ children }) => <code className="rounded bg-neutral-800 px-1 py-0.5 text-xs font-mono text-neutral-200">{children}</code>,
+                  pre: ({ children }) => <pre className="mb-2 overflow-x-auto rounded-lg bg-neutral-800 p-3 text-xs font-mono">{children}</pre>,
+                }}
+              >
+                {textPart.text}
+              </ReactMarkdown>
             </div>
           );
         }
