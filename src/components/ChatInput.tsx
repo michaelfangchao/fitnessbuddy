@@ -26,6 +26,8 @@ type Props = {
   setInput: (v: string) => void;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   onUploadResult: (result: UploadResult) => void;
+  onUploadStart?: () => void;
+  onUploadEnd?: () => void;
   isLoading: boolean;
   userId: number;
   userDate: string;
@@ -36,6 +38,8 @@ export default function ChatInput({
   setInput,
   onSubmit,
   onUploadResult,
+  onUploadStart,
+  onUploadEnd,
   isLoading,
   userId,
   userDate,
@@ -44,7 +48,13 @@ export default function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+
+  function showUploadError(msg: string) {
+    setUploadError(msg);
+    setTimeout(() => setUploadError(null), 4000);
+  }
 
   // Auto-resize textarea
   function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -71,7 +81,10 @@ export default function ChatInput({
     // Reset file input so same file can be re-selected
     e.target.value = "";
 
+    onUploadStart?.();
     setIsUploading(true);
+    setUploadError(null);
+
     try {
       const formData = new FormData();
       formData.append("image", file);
@@ -87,16 +100,17 @@ export default function ChatInput({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Upload failed" }));
-        alert(err.error ?? "Upload failed. Please try again.");
+        showUploadError(err.error ?? "Upload failed. Please try again.");
         return;
       }
 
       const result = await res.json() as UploadResult;
       onUploadResult(result);
     } catch {
-      alert("Upload failed. Please check your connection and try again.");
+      showUploadError("Upload failed. Check your connection and try again.");
     } finally {
       setIsUploading(false);
+      onUploadEnd?.();
     }
   }
 
@@ -106,7 +120,7 @@ export default function ChatInput({
       (window as unknown as { webkitSpeechRecognition?: SpeechRecognitionCtor }).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert("Voice input requires a modern browser with speech recognition support.");
+      showUploadError("Voice input not supported in this browser.");
       return;
     }
 
@@ -216,6 +230,11 @@ export default function ChatInput({
           ↑
         </button>
       </div>
+
+      {/* Inline error — replaces native alert() dialogs */}
+      {uploadError && (
+        <p className="mt-2 text-center text-xs text-red-400">{uploadError}</p>
+      )}
     </form>
   );
 }

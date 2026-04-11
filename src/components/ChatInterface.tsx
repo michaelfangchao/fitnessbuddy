@@ -34,6 +34,8 @@ export default function ChatInterface({ user, streak, pendingDigest }: Props) {
   const [input, setInput] = useState("");
   const [uploadPending, setUploadPending] = useState<UploadPending>(null);
   const [showDigest, setShowDigest] = useState(!!pendingDigest);
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false);
+  const [photoNotice, setPhotoNotice] = useState<string | null>(null);
 
   // Client's local date for X-User-Date header
   const userDate = useMemo(() => new Date().toLocaleDateString("en-CA"), []);
@@ -58,13 +60,13 @@ export default function ChatInterface({ user, streak, pendingDigest }: Props) {
 
   const isLoading = status === "submitted" || status === "streaming";
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages or upload state changes
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages, uploadPending]);
+  }, [messages, uploadPending, isPhotoUploading, photoNotice]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -80,13 +82,28 @@ export default function ChatInterface({ user, streak, pendingDigest }: Props) {
   }
 
   function handleUploadResult(result: { type: string; [key: string]: unknown }) {
+    setIsPhotoUploading(false);
     if (result.type === "meal") {
-      setUploadPending({ type: "meal", data: result as Record<string, unknown> });
+      // Compute totals from items — the upload API returns per-item only
+      const items = (result.items as Array<{
+        calories: number;
+        protein_g: number;
+        carbs_g: number;
+        fat_g: number;
+      }>) ?? [];
+      const withTotals = {
+        ...result,
+        total_calories: Math.round(items.reduce((s, i) => s + (i.calories || 0), 0)),
+        total_protein_g: items.reduce((s, i) => s + (i.protein_g || 0), 0),
+        total_carbs_g: items.reduce((s, i) => s + (i.carbs_g || 0), 0),
+        total_fat_g: items.reduce((s, i) => s + (i.fat_g || 0), 0),
+      };
+      setUploadPending({ type: "meal", data: withTotals as Record<string, unknown> });
     } else if (result.type === "weight") {
       setUploadPending({ type: "weight", data: result as Record<string, unknown> });
     } else {
-      // unknown image
-      alert("I couldn't identify this image as a meal or health screenshot. Try a clearer photo.");
+      // unknown image — show inline notice instead of alert
+      setPhotoNotice("Couldn't identify this image as a meal or health screenshot. Try a clearer photo.");
     }
   }
 
@@ -140,7 +157,7 @@ export default function ChatInterface({ user, streak, pendingDigest }: Props) {
         ref={scrollRef}
         className="chat-scroll flex-1 overflow-y-auto px-4 py-4 space-y-4"
       >
-        {messages.length === 0 && !uploadPending && (
+        {messages.length === 0 && !uploadPending && !isPhotoUploading && !photoNotice && (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-neutral-500">
               Hey {user.name}! Ready to train? Tell me what you did or what you&apos;re planning.
@@ -177,6 +194,32 @@ export default function ChatInterface({ user, streak, pendingDigest }: Props) {
           </div>
         )}
 
+        {/* Photo analyzing indicator */}
+        {isPhotoUploading && (
+          <div className="flex items-center gap-2 text-neutral-400">
+            <div className="flex gap-1">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:0ms]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:150ms]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:300ms]" />
+            </div>
+            <span className="text-xs">Analyzing photo...</span>
+          </div>
+        )}
+
+        {/* Photo notice — shown when image type is unrecognized */}
+        {photoNotice && (
+          <div className="flex items-center justify-between rounded-lg bg-neutral-800 px-4 py-3 text-sm text-neutral-300">
+            <span>{photoNotice}</span>
+            <button
+              onClick={() => setPhotoNotice(null)}
+              className="ml-3 flex-shrink-0 text-neutral-500 hover:text-neutral-300"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Photo upload confirm cards — shown inline after messages */}
         {uploadPending?.type === "meal" && (
           <MealConfirmCard
@@ -202,6 +245,8 @@ export default function ChatInterface({ user, streak, pendingDigest }: Props) {
         setInput={setInput}
         onSubmit={handleSubmit}
         onUploadResult={handleUploadResult}
+        onUploadStart={() => setIsPhotoUploading(true)}
+        onUploadEnd={() => setIsPhotoUploading(false)}
         isLoading={isLoading}
         userId={user.id}
         userDate={userDate}
