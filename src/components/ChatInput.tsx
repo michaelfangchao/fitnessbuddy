@@ -156,14 +156,14 @@ export default function ChatInput({
 
   return (
     <form onSubmit={onSubmit} className="border-t border-neutral-800 px-4 py-3">
-      {/* Hidden file input */}
+      {/* File input — visually hidden but NOT display:none.
+          iOS Safari drops onChange when the input has display:none. */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        className="hidden"
+        style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
         onChange={handlePhotoSelect}
-        disabled={isBusy}
       />
 
       <div className="flex items-end gap-2">
