@@ -33,6 +33,15 @@
 
 ---
 
+## Deferred design findings (design-review, 2026-04-11)
+
+These were found during the `/design-review` audit. Low impact for a 2-user personal app — revisit if user base grows.
+
+- **Emoji avatars on profile page:** FC and wife avatars use emoji (💪 / 🏋️). Fine for personal use; swap to photo thumbnails or monogram initials if the app ever expands.
+- **PR badge emoji (🏆):** In `WorkoutConfirmCard`. Replace with SVG if branding tightens up.
+- **Font stack:** System font (`-apple-system, BlinkMacSystemFont`) is perfectly readable but lacks custom personality. Consider adding a geometric sans (e.g., Inter) for differentiation post-MVP.
+- **No CSS design token system:** Colors are hardcoded Tailwind values. Would benefit from CSS custom properties for theme consistency if the palette expands beyond the current 4-color set.
+
 ## Deferred from design review (for reference)
 - Mid-set real-time PR detection — v2, needs continuous voice listening or per-set UI
 - Streak calendar heatmap — build after 2+ months of consistent use data
