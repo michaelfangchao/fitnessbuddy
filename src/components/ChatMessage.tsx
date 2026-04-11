@@ -81,10 +81,12 @@ export default function ChatMessage({ message, userId, userDate }: Props) {
 
           switch (toolPart.toolName) {
             case "log_workout":
+              if (result.type !== "workout_confirm") return null;
               return (
                 <WorkoutConfirmCard key={key} data={result} userId={userId} userDate={userDate} />
               );
             case "log_meal":
+              if (result.type !== "meal_confirm") return null;
               return (
                 <MealConfirmCard key={key} data={result} userId={userId} userDate={userDate} />
               );

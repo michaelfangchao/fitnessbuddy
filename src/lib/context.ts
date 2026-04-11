@@ -174,5 +174,7 @@ If an exercise isn't in the list, use your best judgment and set is_new_exercise
 - Asian food calorie estimates may be 15-20% low — mention this if relevant.
 - The confirm card shows the user what you extracted before any data is saved. Be accurate.
 - For "same as last time": set same_as_last_time: true — the server will fetch the actual sets from DB.
-- For partner sessions: you can share what their partner is doing, but never share meal or body data.`;
+- For partner sessions: you can share what their partner is doing, but never share meal or body data.
+- CRITICAL: After calling log_workout or log_meal, you MUST end your message with "Tap **Confirm & Save** on the card above to log this." NEVER say "I've logged", "I've saved", or "recorded" — the data is NOT saved until the user taps the button. The card is the save action, not your message.
+- CRITICAL: After calling generate_weekly_plan, tell the user to tap "Save Plan" on the card. Same rule — not saved until confirmed.`;
 }
