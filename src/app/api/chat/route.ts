@@ -377,14 +377,16 @@ export async function POST(request: Request) {
 
     return result.toUIMessageStreamResponse();
   } catch (error: unknown) {
-    const err = error as { status?: number; message?: string };
-    if (err?.status === 429) {
+    // AI SDK v6 APICallError uses statusCode, not status
+    const err = error as { statusCode?: number; status?: number; message?: string };
+    const code = err?.statusCode ?? err?.status;
+    if (code === 429) {
       return new Response(
         JSON.stringify({ error: "Service busy, try again in a moment." }),
         { status: 429, headers: { "Content-Type": "application/json" } }
       );
     }
-    if (err?.status && err.status >= 500) {
+    if (code && code >= 500) {
       return new Response(
         JSON.stringify({ error: "AI service unavailable." }),
         { status: 503, headers: { "Content-Type": "application/json" } }
