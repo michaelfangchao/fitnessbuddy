@@ -15,14 +15,32 @@ type Props = {
   userDate: string;
 };
 
-type DynamicToolPart = {
-  type: "dynamic-tool";
+// Normalised view of any tool part (static or dynamic) once output is ready.
+type ToolPartResolved = {
   toolName: string;
-  toolCallId: string;
-  state: string;
-  output?: unknown;
-  input?: unknown;
+  output: Record<string, unknown>;
 };
+
+// Static tool parts have type "tool-{toolName}" (no separate toolName field).
+// Dynamic tool parts have type "dynamic-tool" with a toolName field.
+// Both have state and output once executed.
+function resolveToolPart(part: { type: string; [k: string]: unknown }): ToolPartResolved | null {
+  if (part.type === "dynamic-tool") {
+    if (part.state !== "output-available" || !part.output) return null;
+    return {
+      toolName: part.toolName as string,
+      output: part.output as Record<string, unknown>,
+    };
+  }
+  if (part.type.startsWith("tool-")) {
+    if (part.state !== "output-available" || !part.output) return null;
+    return {
+      toolName: part.type.slice(5), // "tool-log_workout" → "log_workout"
+      output: part.output as Record<string, unknown>,
+    };
+  }
+  return null;
+}
 
 export default function ChatMessage({ message, userId, userDate }: Props) {
   const isUser = message.role === "user";
@@ -72,42 +90,39 @@ export default function ChatMessage({ message, userId, userDate }: Props) {
           );
         }
 
-        if (part.type === "dynamic-tool") {
-          const toolPart = part as DynamicToolPart;
-          if (toolPart.state !== "output-available" || !toolPart.output) return null;
+        // Handle both static tool parts ("tool-log_workout") and dynamic ("dynamic-tool")
+        const resolved = resolveToolPart(part as { type: string; [k: string]: unknown });
+        if (!resolved) return null;
 
-          const result = toolPart.output as Record<string, unknown>;
-          const key = `${message.id}-${i}`;
+        const { toolName, output } = resolved;
+        const key = `${message.id}-${i}`;
 
-          switch (toolPart.toolName) {
-            case "log_workout":
-              if (result.type !== "workout_confirm") return null;
-              return (
-                <WorkoutConfirmCard key={key} data={result} userId={userId} userDate={userDate} />
-              );
-            case "log_meal":
-              if (result.type !== "meal_confirm") return null;
-              return (
-                <MealConfirmCard key={key} data={result} userId={userId} userDate={userDate} />
-              );
-            case "log_body_measurement":
-              // Auto-save — no confirm card
-              return null;
-            case "generate_weekly_plan":
-              return (
-                <WeeklyPlanConfirmCard key={key} data={result} userId={userId} userDate={userDate} />
-              );
-            case "query_progression":
-            case "get_body_stats":
-              return result.type === "chart" ? (
-                <ProgressionChart key={key} data={result} />
-              ) : null;
-            default:
-              return null;
-          }
+        switch (toolName) {
+          case "log_workout":
+            if (output.type !== "workout_confirm") return null;
+            return (
+              <WorkoutConfirmCard key={key} data={output} userId={userId} userDate={userDate} />
+            );
+          case "log_meal":
+            if (output.type !== "meal_confirm") return null;
+            return (
+              <MealConfirmCard key={key} data={output} userId={userId} userDate={userDate} />
+            );
+          case "log_body_measurement":
+            // Auto-save — no confirm card
+            return null;
+          case "generate_weekly_plan":
+            return (
+              <WeeklyPlanConfirmCard key={key} data={output} userId={userId} userDate={userDate} />
+            );
+          case "query_progression":
+          case "get_body_stats":
+            return output.type === "chart" ? (
+              <ProgressionChart key={key} data={output} />
+            ) : null;
+          default:
+            return null;
         }
-
-        return null;
       })}
     </div>
   );
